@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SOUNDSTAGE QUIZ — 노래 제목 맞추기 게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#090b10',
+                        surface: '#111520',
+                        surfaceElev: '#181e2e',
+                        stageViolet: '#7c3aed',
+                        stageCyan: '#06b6d4',
+                        stageEmerald: '#10b981',
+                        stageRose: '#f43f5e',
+                    },
+                    boxShadow: {
+                        stage: '0 20px 50px -12px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 255, 255, 0.06)',
+                        glowCyan: '0 0 18px rgba(6, 182, 212, 0.25)',
+                        glowViolet: '0 0 22px rgba(124, 58, 237, 0.28)',
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        /* 커스텀 스크롤바 및 무대 배경 연출 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.28);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.48);
+        }
+
+        .stage-backdrop {
+            background-color: #090b10;
+            background-image:
+                radial-gradient(ellipse 75% 45% at 18% 0%, rgba(124, 58, 237, 0.16), transparent 65%),
+                radial-gradient(ellipse 65% 45% at 85% 8%, rgba(6, 182, 212, 0.13), transparent 65%),
+                linear-gradient(to bottom, rgba(9, 11, 16, 0.7), #090b10);
+        }
+
+        .glass-panel {
+            background: rgba(17, 21, 32, 0.85);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-sub {
+            background: rgba(24, 30, 46, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        @keyframes eqBounce {
+            0%, 100% { transform: scaleY(0.22); }
+            50% { transform: scaleY(1); }
+        }
+
+        .eq-bar {
+            transform-origin: bottom;
+            transform: scaleY(0.22);
+            transition: background-color 0.2s ease;
+        }
+
+        .eq-active .eq-bar {
+            animation: eqBounce 0.78s ease-in-out infinite;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: translateY(6px) scale(0.99); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .animate-pop {
+            animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes shakeWrong {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        .animate-shake {
+            animation: shakeWrong 0.34s ease-in-out;
+        }
+
+        button:disabled {
+            opacity: .42;
+            cursor: not-allowed;
+            filter: saturate(.55);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="stage-backdrop text-slate-100 h-[100dvh] overflow-hidden flex flex-col selection:bg-stageCyan selection:text-slate-950 antialiased">
+
+    <!-- 상단 컴팩트 내비게이션 헤더 -->
+    <header class="shrink-0 z-30 border-b border-white/[0.07] bg-obsidian/85 backdrop-blur-xl">
+        <div class="max-w-3xl mx-auto px-3 sm:px-5 h-11 sm:h-12 flex items-center justify-between gap-2">
+            <button type="button" onclick="resetToHome()" class="flex items-center gap-2 text-left group focus:outline-none">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-stageViolet via-indigo-500 to-stageCyan flex items-center justify-center shadow-glowViolet group-hover:scale-105 transition">
+                    <i class="fa-solid fa-compact-disc text-white text-xs sm:text-sm"></i>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="font-black tracking-tight text-sm sm:text-base text-white">SOUNDSTAGE</span>
+                    <span class="px-1.5 py-0.5 text-[9px] font-extrabold rounded bg-stageCyan/15 text-stageCyan border border-stageCyan/25">QUIZ</span>
+                </div>
+            </button>
+
+            <div class="flex items-center gap-2">
+                <button type="button" id="homeBtn" onclick="resetToHome()" class="hidden px-2.5 py-1 rounded-lg glass-sub hover:bg-white/10 text-[11px] font-bold text-slate-200 transition flex items-center gap-1">
+                    <i class="fa-solid fa-house text-stageCyan text-[10px]"></i>
+                    <span>로비로</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 스테이지 컨테이너 (남은 화면 높이 100% 사용, 스크롤 없음) -->
+    <main class="flex-1 min-h-0 w-full max-w-3xl mx-auto px-3 sm:px-5 py-2 sm:py-3 flex flex-col justify-center overflow-hidden">
+
+        <!-- ========================================================= -->
+        <!-- [1] 로비 / 설정 화면 (모바일·PC 한 화면 고정)              -->
+        <!-- ========================================================= -->
+        <section id="setupScreen" class="glass-panel rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-stage flex flex-col justify-between gap-2 sm:gap-3 max-h-full overflow-hidden animate-pop">
+
+            <!-- 상단 타이틀 -->
+            <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-white/[0.07] shrink-0">
+                <div>
+                    <h1 class="text-base sm:text-xl font-black tracking-tight text-white">
+                        노래 제목 맞추기
+                    </h1>
+                    <p class="text-[11px] text-slate-400">
+                        모드와 청음 난이도를 선택하고 바로 시작하세요
+                    </p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-stageViolet/15 border border-stageViolet/30 text-violet-300 text-[10px] font-bold shrink-0">
+                    <span class="w-1.5 h-1.5 rounded-full bg-stageCyan animate-pulse"></span>
+                    LIVE AUDIO
+                </span>
+            </div>
+
+            <!-- 4가지 모드 세그먼트 탭 -->
+            <div role="tablist" aria-label="게임 모드 선택" class="grid grid-cols-4 gap-1 p-1 rounded-xl bg-obsidian/80 border border-white/[0.06] shrink-0">
+                <button type="button" id="tabGroups" onclick="switchMode('groups')"
+                        class="py-1.5 px-1.5 rounded-lg bg-gradient-to-r from-stageViolet to-indigo-600 text-white font-extrabold text-[11px] sm:text-xs transition flex items-center justify-center gap-1 shadow-glowViolet">
+                    <i class="fa-solid fa-layer-group text-[10px]"></i>
+                    <span>그룹 5칸</span>
+                </button>
+                <button type="button" id="tabCurated" onclick="switchMode('curated')"
+                        class="py-1.5 px-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.04] font-bold text-[11px] sm:text-xs transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-fire text-[10px]"></i>
+                    <span>24–26곡</span>
+                </button>
+                <button type="button" id="tabSearch" onclick="switchMode('search')"
+                        class="py-1.5 px-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.04] font-bold text-[11px] sm:text-xs transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                    <span>가수검색</span>
+                </button>
+                <button type="button" id="tabUpload" onclick="switchMode('upload')"
+                        class="py-1.5 px-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.04] font-bold text-[11px] sm:text-xs transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-folder-open text-[10px]"></i>
+                    <span>내 MP3</span>
+                </button>
+            </div>
+
+            <!-- [패널 0] 그룹별 5칸 프리셋 -->
+            <div id="panelGroups" class="space-y-2 shrink-0">
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-stageCyan text-[10px]"></i>
+                        <span>5칸 그룹 / 테마 선택</span>
+                    </label>
+                    <span id="groupSelectedBadge" class="px-2 py-0.5 rounded-full bg-stageCyan/10 border border-stageCyan/25 text-stageCyan text-[10px] font-bold">
+                        빅뱅 (BIGBANG)
+                    </span>
+                </div>
+
+                <!-- 5칸 슬롯 고밀도 그리드 (모바일 2열, 5번 슬롯 가로 전체) -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
+                    <!-- 1번 칸: 빅뱅 -->
+                    <button type="button" onclick="selectGroupPreset('bigbang')" data-group="bigbang"
+                            class="group-card text-left p-2 sm:p-2.5 rounded-xl border-2 border-stageCyan bg-stageCyan/10 transition flex flex-col justify-between gap-0.5 shadow-glowCyan">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="px-1.5 py-0.2 rounded bg-amber-400/15 text-amber-300 text-[9px] font-black">01</span>
+                            <i class="fa-solid fa-crown text-amber-400 text-[10px]"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-black text-white leading-tight">빅뱅 (BIGBANG)</h3>
+                            <p class="text-[10px] text-slate-400 truncate">거짓말, 하루하루, 뱅뱅뱅</p>
+                        </div>
+                    </button>
+
+                    <!-- 2번 칸: 아이브 -->
+                    <button type="button" onclick="selectGroupPreset('ive')" data-group="ive"
+                            class="group-card text-left p-2 sm:p-2.5 rounded-xl glass-sub hover:border-white/20 hover:bg-white/[0.06] transition flex flex-col justify-between gap-0.5">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-300 text-[9px] font-black">02</span>
+                            <i class="fa-solid fa-wand-magic-sparkles text-rose-400 text-[10px]"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-black text-white leading-tight">아이브 (IVE)</h3>
+                            <p class="text-[10px] text-slate-400 truncate">LOVE DIVE, I AM, 해야</p>
+                        </div>
+                    </button>
+
+                    <!-- 3번 칸: 리센느 -->
+                    <button type="button" onclick="selectGroupPreset('rescene')" data-group="rescene"
+                            class="group-card text-left p-2 sm:p-2.5 rounded-xl glass-sub hover:border-white/20 hover:bg-white/[0.06] transition flex flex-col justify-between gap-0.5">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-300 text-[9px] font-black">03</span>
+                            <i class="fa-solid fa-spray-can-sparkles text-stageCyan text-[10px]"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-black text-white leading-tight">리센느 (RESCENE)</h3>
+                            <p class="text-[10px] text-slate-400 truncate">LOVE ATTACK, YoYo, Pinball</p>
+                        </div>
+                    </button>
+
+                    <!-- 4번 칸: DAY6 + 이무진 -->
+                    <button type="button" onclick="selectGroupPreset('day6_mujin')" data-group="day6_mujin"
+                            class="group-card text-left p-2 sm:p-2.5 rounded-xl glass-sub hover:border-white/20 hover:bg-white/[0.06] transition flex flex-col justify-between gap-0.5">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-300 text-[9px] font-black">04 · 히트곡</span>
+                            <i class="fa-solid fa-guitar text-stageEmerald text-[10px]"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-black text-white leading-tight">DAY6 + 이무진</h3>
+                            <p class="text-[10px] text-slate-400 truncate">예뻤어, 한 페이지, 신호등</p>
+                        </div>
+                    </button>
+
+                    <!-- 5번 칸: aespa + ILLIT -->
+                    <button type="button" onclick="selectGroupPreset('aespa_illit')" data-group="aespa_illit"
+                            class="group-card text-left p-2 sm:p-2.5 rounded-xl glass-sub hover:border-white/20 hover:bg-white/[0.06] transition flex flex-col justify-between gap-0.5 col-span-2">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="px-1.5 py-0.2 rounded bg-violet-500/15 text-violet-300 text-[9px] font-black">05 · 히트곡</span>
+                            <i class="fa-solid fa-bolt text-violet-400 text-[10px]"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-black text-white leading-tight">aespa + ILLIT</h3>
+                            <p class="text-[10px] text-slate-400 truncate">Supernova, Next Level, Whiplash, Magnetic, Cherish</p>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- 라운드 수 선택 -->
+                <div class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl glass-sub">
+                    <span class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-ol text-stageViolet text-[10px]"></i>
+                        출제 라운드
+                    </span>
+                    <div class="flex items-center gap-1 bg-obsidian/70 p-0.5 rounded-lg border border-white/[0.05]">
+                        <button type="button" onclick="selectRoundCount(5)" data-rc="5" class="rc-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white text-[11px] font-bold transition">5곡</button>
+                        <button type="button" onclick="selectRoundCount(10)" data-rc="10" class="rc-btn px-2.5 py-1 rounded-md bg-stageCyan text-slate-950 text-[11px] font-extrabold transition">10곡</button>
+                        <button type="button" onclick="selectRoundCount(15)" data-rc="15" class="rc-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white text-[11px] font-bold transition">15곡</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [패널 A] 2024–2026 큐레이션 히트곡 -->
+            <div id="panelCurated" class="hidden space-y-2 shrink-0">
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-calendar-days text-stageCyan text-[10px]"></i>
+                        <span>발매 연도 차트 필터</span>
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        <button type="button" onclick="selectYearFilter('all')" data-year="all"
+                                class="year-btn py-2 px-2 rounded-xl border-2 border-stageCyan bg-stageCyan/10 text-[11px] font-extrabold text-white transition">
+                            전체 (24–26)
+                        </button>
+                        <button type="button" onclick="selectYearFilter('2024')" data-year="2024"
+                                class="year-btn py-2 px-2 rounded-xl glass-sub hover:border-white/20 text-[11px] font-bold text-slate-300 transition">
+                            2024 히트곡
+                        </button>
+                        <button type="button" onclick="selectYearFilter('2025')" data-year="2025"
+                                class="year-btn py-2 px-2 rounded-xl glass-sub hover:border-white/20 text-[11px] font-bold text-slate-300 transition">
+                            2025 히트곡
+                        </button>
+                        <button type="button" onclick="selectYearFilter('2026')" data-year="2026"
+                                class="year-btn py-2 px-2 rounded-xl glass-sub hover:border-white/20 text-[11px] font-bold text-slate-300 transition">
+                            2026 최신곡
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl glass-sub">
+                    <span class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-ol text-stageViolet text-[10px]"></i>
+                        출제 라운드
+                    </span>
+                    <div class="flex items-center gap-1 bg-obsidian/70 p-0.5 rounded-lg border border-white/[0.05]">
+                        <button type="button" onclick="selectRoundCount(5)" data-rc="5" class="rc-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white text-[11px] font-bold transition">5곡</button>
+                        <button type="button" onclick="selectRoundCount(10)" data-rc="10" class="rc-btn px-2.5 py-1 rounded-md bg-stageCyan text-slate-950 text-[11px] font-extrabold transition">10곡</button>
+                        <button type="button" onclick="selectRoundCount(15)" data-rc="15" class="rc-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white text-[11px] font-bold transition">15곡</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [패널 B] 가수 / 키워드 실시간 검색 -->
+            <div id="panelSearch" class="hidden space-y-2 shrink-0">
+                <div class="space-y-1">
+                    <label for="artistSearchInput" class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-microphone-lines text-stageCyan text-[10px]"></i>
+                        <span>아티스트 또는 곡 키워드 검색</span>
+                    </label>
+                    <input type="text" id="artistSearchInput"
+                           placeholder="예: aespa, BTS, DAY6, 뉴진스, Bruno Mars"
+                           class="w-full px-3 py-2 rounded-xl bg-obsidian/80 border border-white/10 focus:border-stageCyan focus:ring-1 focus:ring-stageCyan/30 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none transition">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-1">
+                    <span class="text-[10px] font-semibold text-slate-400 mr-0.5">추천:</span>
+                    <button type="button" onclick="quickSearch('aespa')" class="px-2 py-0.5 rounded-md glass-sub hover:border-stageCyan/40 text-[11px] text-slate-200 transition">aespa</button>
+                    <button type="button" onclick="quickSearch('IVE')" class="px-2 py-0.5 rounded-md glass-sub hover:border-stageCyan/40 text-[11px] text-slate-200 transition">IVE</button>
+                    <button type="button" onclick="quickSearch('DAY6')" class="px-2 py-0.5 rounded-md glass-sub hover:border-stageCyan/40 text-[11px] text-slate-200 transition">DAY6</button>
+                    <button type="button" onclick="quickSearch('이무진')" class="px-2 py-0.5 rounded-md glass-sub hover:border-stageCyan/40 text-[11px] text-slate-200 transition">이무진</button>
+                    <button type="button" onclick="quickSearch('BIGBANG')" class="px-2 py-0.5 rounded-md glass-sub hover:border-stageCyan/40 text-[11px] text-slate-200 transition">BIGBANG</button>
+                </div>
+            </div>
+
+            <!-- [패널 C] 로컬 MP3 / WAV 업로드 -->
+            <div id="panelUpload" class="hidden space-y-2 shrink-0">
+                <div id="dropZone" onclick="document.getElementById('mp3FileInput').click()"
+                     class="border-2 border-dashed border-white/15 hover:border-stageCyan/70 bg-obsidian/60 hover:bg-stageCyan/[0.04] rounded-xl p-3.5 text-center cursor-pointer transition">
+                    <input type="file" id="mp3FileInput" accept=".mp3,.wav,.m4a,.ogg,audio/*" multiple class="hidden" onchange="handleFileSelect(event)">
+                    <div class="flex items-center justify-center gap-2 text-stageCyan mb-1">
+                        <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                        <span class="text-xs font-bold text-white">MP3 / WAV 파일 선택 또는 드래그</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400">파일명(확장자 제외)이 자동으로 정답 제목이 됩니다.</p>
+                </div>
+
+                <div id="uploadedFileList" class="hidden space-y-1 max-h-20 overflow-y-auto pr-1"></div>
+            </div>
+
+            <!-- 청음 시간 난이도 선택 (항상 4열 한 줄 배치) -->
+            <div class="space-y-1.5 shrink-0">
+                <div class="flex items-center justify-between">
+                    <label class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-gauge-high text-stageViolet text-[10px]"></i>
+                        <span>재생 시간 난이도</span>
+                    </label>
+                    <span class="text-[10px] text-slate-400">짧을수록 고득점</span>
+                </div>
+
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button type="button" onclick="selectDuration(1)" data-dur="1"
+                            class="dur-btn p-2 rounded-xl glass-sub hover:border-white/20 text-left transition">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                            <span class="text-xs font-black text-rose-400">1초</span>
+                            <span class="text-[9px] font-extrabold px-1 py-0.2 rounded bg-rose-500/15 text-rose-300 w-fit">×3.0</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-0.5 truncate">극한</p>
+                    </button>
+
+                    <button type="button" onclick="selectDuration(3)" data-dur="3"
+                            class="dur-btn p-2 rounded-xl border-2 border-stageCyan bg-stageCyan/10 text-left transition shadow-glowCyan">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                            <span class="text-xs font-black text-stageCyan">3초</span>
+                            <span class="text-[9px] font-extrabold px-1 py-0.2 rounded bg-stageCyan/20 text-stageCyan w-fit">×2.0</span>
+                        </div>
+                        <p class="text-[10px] text-slate-300 mt-0.5 truncate">추천</p>
+                    </button>
+
+                    <button type="button" onclick="selectDuration(5)" data-dur="5"
+                            class="dur-btn p-2 rounded-xl glass-sub hover:border-white/20 text-left transition">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                            <span class="text-xs font-black text-white">5초</span>
+                            <span class="text-[9px] font-extrabold px-1 py-0.2 rounded bg-white/10 text-slate-300 w-fit">×1.5</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-0.5 truncate">보통</p>
+                    </button>
+
+                    <button type="button" onclick="selectDuration(30)" data-dur="30"
+                            class="dur-btn p-2 rounded-xl glass-sub hover:border-white/20 text-left transition">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5">
+                            <span class="text-xs font-black text-white">30초</span>
+                            <span class="text-[9px] font-extrabold px-1 py-0.2 rounded bg-white/10 text-slate-300 w-fit">×1.0</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-0.5 truncate">전체</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 게임 시작 CTA -->
+            <button type="button" id="startGameBtn" onclick="startGame()"
+                    class="shrink-0 w-full py-3 px-5 rounded-xl bg-gradient-to-r from-stageViolet via-indigo-600 to-stageCyan hover:brightness-110 active:scale-[0.99] text-white font-black text-sm tracking-tight shadow-glowViolet transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play text-xs"></i>
+                <span>스테이지 시작하기</span>
+            </button>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- [2] 음원 로딩 오버레이                                      -->
+        <!-- ========================================================= -->
+        <section id="loadingOverlay" class="hidden glass-panel rounded-2xl sm:rounded-3xl p-6 text-center space-y-4 shadow-stage animate-pop">
+            <div class="relative w-12 h-12 mx-auto flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border-4 border-stageViolet/20"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-t-stageCyan border-r-stageViolet animate-spin"></div>
+                <i class="fa-solid fa-music text-white text-sm"></i>
+            </div>
+            <div class="space-y-1">
+                <h2 class="text-base sm:text-lg font-black text-white">음원 스트림 준비 중</h2>
+                <p id="loadingSub" class="text-xs text-slate-400">트랙 정보를 불러오고 있습니다...</p>
+            </div>
+            <div class="max-w-xs mx-auto w-full h-1.5 rounded-full bg-obsidian overflow-hidden border border-white/[0.06]">
+                <div id="loadingBar" class="h-full w-1/4 bg-gradient-to-r from-stageViolet to-stageCyan transition-all duration-300 rounded-full"></div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- [3] 게임 플레이 스테이지 (스크롤 없이 한 화면 고정)         -->
+        <!-- ========================================================= -->
+        <section id="gameScreen" class="hidden glass-panel rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-stage flex flex-col justify-between gap-2.5 sm:gap-3.5 max-h-full overflow-hidden animate-pop">
+
+            <!-- 상단 스탯 바 -->
+            <div class="grid grid-cols-3 gap-2 shrink-0">
+                <div class="glass-sub rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">ROUND</span>
+                        <span id="roundIndicator" class="text-xs sm:text-sm font-black text-white">1 / 10</span>
+                    </div>
+                    <i class="fa-solid fa-record-vinyl text-stageCyan/80 text-xs"></i>
+                </div>
+
+                <div class="glass-sub rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">COMBO</span>
+                        <span id="comboIndicator" class="text-xs sm:text-sm font-black text-amber-300">0 🔥</span>
+                    </div>
+                    <i class="fa-solid fa-bolt text-amber-400/80 text-xs"></i>
+                </div>
+
+                <div class="glass-sub rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">SCORE</span>
+                        <span id="scoreIndicator" class="text-xs sm:text-sm font-black text-stageEmerald">0</span>
+                    </div>
+                    <i class="fa-solid fa-trophy text-stageEmerald/80 text-xs"></i>
+                </div>
+            </div>
+
+            <!-- 중앙 오디오 이퀄라이저 & 재생 컨트롤 카드 -->
+            <div class="rounded-2xl bg-gradient-to-b from-surfaceElev/90 to-obsidian/90 border border-white/[0.08] p-3 sm:p-4 space-y-2.5 sm:space-y-3 shrink-0">
+                <div class="flex items-center justify-between gap-2">
+                    <span id="modeBadge" class="px-2.5 py-0.5 rounded-full bg-stageViolet/15 border border-stageViolet/30 text-violet-300 text-[11px] font-bold truncate max-w-[55%]">
+                        그룹 모드
+                    </span>
+                    <span id="difficultyBadge" class="px-2.5 py-0.5 rounded-full bg-stageCyan/10 border border-stageCyan/25 text-stageCyan text-[11px] font-extrabold shrink-0">
+                        3초 듣기 (×2.0)
+                    </span>
+                </div>
+
+                <!-- 이퀄라이저 바 (컴팩트 높이) -->
+                <div id="equalizerBox" class="h-9 sm:h-11 flex items-end justify-center gap-1.5 px-4">
+                    <span class="eq-bar w-1.5 h-8 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.0s"></span>
+                    <span class="eq-bar w-1.5 h-10 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.12s"></span>
+                    <span class="eq-bar w-1.5 h-11 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.24s"></span>
+                    <span class="eq-bar w-1.5 h-7 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.08s"></span>
+                    <span class="eq-bar w-1.5 h-10 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.19s"></span>
+                    <span class="eq-bar w-1.5 h-9 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.31s"></span>
+                    <span class="eq-bar w-1.5 h-11 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.05s"></span>
+                    <span class="eq-bar w-1.5 h-8 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.17s"></span>
+                    <span class="eq-bar w-1.5 h-10 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.28s"></span>
+                    <span class="eq-bar w-1.5 h-7 rounded-full bg-gradient-to-t from-stageViolet to-stageCyan" style="animation-delay: 0.14s"></span>
+                </div>
+
+                <!-- 재생 진행 바 -->
+                <div class="space-y-1">
+                    <div class="w-full h-1.5 rounded-full bg-obsidian overflow-hidden border border-white/[0.05]">
+                        <div id="playProgressBar" class="h-full w-0 bg-gradient-to-r from-stageViolet via-indigo-400 to-stageCyan transition-none rounded-full"></div>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] sm:text-[11px] font-medium text-slate-400">
+                        <span id="playbackStatusText" class="truncate pr-2">준비 완료</span>
+                        <span id="playbackTimerText" class="shrink-0">0.0s / 3.0s</span>
+                    </div>
+                </div>
+
+                <!-- 청음 조작 버튼 그룹 (항상 3열 한 줄) -->
+                <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+                    <button type="button" id="replayBtn" onclick="replayCurrentSong(false)"
+                            class="py-2 px-2 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-[11px] sm:text-xs font-bold text-white transition flex items-center justify-center gap-1 border border-white/10">
+                        <i class="fa-solid fa-rotate-right text-stageCyan text-[10px]"></i>
+                        <span>다시</span>
+                        <span id="replayCountBadge" class="px-1.5 py-0.2 rounded bg-obsidian text-stageCyan text-[10px] font-extrabold">2</span>
+                    </button>
+
+                    <button type="button" id="fromStartBtn" onclick="replayCurrentSong(true)"
+                            title="전주(0초)부터 재생"
+                            class="py-2 px-2 rounded-xl glass-sub hover:bg-white/10 active:scale-95 text-[11px] sm:text-xs font-semibold text-slate-300 transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-backward-step text-violet-400 text-[10px]"></i>
+                        <span>0초부터</span>
+                    </button>
+
+                    <button type="button" id="hintBtn" onclick="useNextHint()"
+                            class="py-2 px-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-[11px] sm:text-xs font-bold text-amber-300 transition flex items-center justify-center gap-1 border border-amber-400/25">
+                        <i class="fa-regular fa-lightbulb text-[10px]"></i>
+                        <span id="hintBtnText">힌트 1</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2단계 힌트 표시 영역 -->
+            <div id="hintBox" class="hidden rounded-xl bg-amber-500/[0.08] border border-amber-400/25 px-3 py-2 space-y-0.5 text-[11px] sm:text-xs shrink-0">
+                <p id="hintLine1" class="font-semibold text-amber-200 truncate"></p>
+                <p id="hintLine2" class="hidden font-bold text-white truncate"></p>
+            </div>
+
+            <!-- 정답 입력 폼 -->
+            <form id="answerForm" onsubmit="submitAnswer(event)" class="flex flex-col sm:flex-row gap-1.5 sm:gap-2 shrink-0">
+                <input type="text" id="answerInput" autocomplete="off"
+                       placeholder="노래 제목 입력 (한글·영문 무관)"
+                       class="flex-1 px-3.5 py-2.5 rounded-xl bg-obsidian/85 border border-white/15 focus:border-stageCyan focus:ring-1 focus:ring-stageCyan/30 text-xs sm:text-sm font-medium text-white placeholder-slate-500 focus:outline-none transition">
+                <div class="grid grid-cols-3 sm:flex gap-1.5">
+                    <button type="submit" id="submitAnswerBtn"
+                            class="col-span-2 sm:w-auto px-4 py-2.5 rounded-xl bg-stageCyan hover:brightness-110 active:scale-[0.98] text-slate-950 font-black text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shadow-glowCyan">
+                        <i class="fa-solid fa-check text-xs"></i>
+                        <span>정답 확인</span>
+                    </button>
+                    <button type="button" id="skipBtn" onclick="skipRound()"
+                            class="col-span-1 sm:w-auto px-3 py-2.5 rounded-xl glass-sub hover:bg-white/10 active:scale-[0.98] text-slate-300 font-bold text-xs sm:text-sm transition">
+                        포기
+                    </button>
+                </div>
+            </form>
+
+            <!-- 라운드 판정 & 앨범 공개 카드 (컴팩트 가로형) -->
+            <div id="feedbackBox" class="hidden rounded-2xl p-2.5 sm:p-3.5 border transition shrink-0">
+                <div class="flex items-center justify-between gap-2.5">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <img id="revealedArtwork" src="https://placehold.co/120x120/181e2e/06b6d4?text=TRACK"
+                             alt="앨범 커버"
+                             onerror="this.src='https://placehold.co/120x120/181e2e/06b6d4?text=TRACK'"
+                             class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover border border-white/15 shrink-0 shadow-md">
+                        <div class="min-w-0 space-y-0.5">
+                            <div class="flex items-center gap-1.5">
+                                <span id="feedbackBadge" class="px-2 py-0.5 rounded text-[10px] font-black shrink-0">정답!</span>
+                                <span id="feedbackPoints" class="text-[10px] sm:text-xs font-extrabold text-stageEmerald truncate"></span>
+                            </div>
+                            <h3 id="revealedTitle" class="text-xs sm:text-sm font-black text-white truncate"></h3>
+                            <p id="revealedArtist" class="text-[10px] sm:text-[11px] text-slate-300 truncate"></p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 shrink-0">
+                        <button type="button" id="previewFullBtn" onclick="playFullPreview()"
+                                class="px-2.5 py-1.5 rounded-lg glass-sub hover:bg-white/10 text-[10px] sm:text-xs font-bold text-slate-200 transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-headphones text-stageCyan text-[10px]"></i>
+                            <span>30초</span>
+                        </button>
+                        <button type="button" id="nextRoundBtn" onclick="nextRound()"
+                                class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-stageViolet to-indigo-600 hover:brightness-110 text-white text-[11px] sm:text-xs font-black transition flex items-center justify-center gap-1 shadow-glowViolet">
+                            <span>다음</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- [4] 최종 결과 리포트 화면 (상·하 고정, 내역만 내부 스크롤)   -->
+        <!-- ========================================================= -->
+        <section id="resultScreen" class="hidden glass-panel rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-stage flex flex-col justify-between gap-2.5 sm:gap-3.5 max-h-full overflow-hidden animate-pop">
+            <div class="text-center space-y-1 pb-2 border-b border-white/[0.07] shrink-0">
+                <span class="inline-block px-2.5 py-0.5 rounded-full bg-stageViolet/15 border border-stageViolet/30 text-violet-300 text-[10px] font-bold">
+                    STAGE COMPLETE
+                </span>
+                <div id="resultGrade" class="text-3xl sm:text-5xl font-black bg-gradient-to-r from-stageCyan via-white to-violet-300 bg-clip-text text-transparent leading-tight">
+                    S
+                </div>
+                <p id="resultComment" class="text-[11px] sm:text-xs text-slate-300 font-medium truncate"></p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 shrink-0">
+                <div class="glass-sub rounded-xl p-2 text-center">
+                    <span class="text-[10px] text-slate-400 block">최종 점수</span>
+                    <span id="finalScore" class="text-sm sm:text-lg font-black text-stageEmerald">0</span>
+                </div>
+                <div class="glass-sub rounded-xl p-2 text-center">
+                    <span class="text-[10px] text-slate-400 block">정답률</span>
+                    <span id="finalAccuracy" class="text-sm sm:text-lg font-black text-white">0%</span>
+                </div>
+                <div class="glass-sub rounded-xl p-2 text-center">
+                    <span class="text-[10px] text-slate-400 block">최대 콤보</span>
+                    <span id="finalMaxCombo" class="text-sm sm:text-lg font-black text-amber-300">0</span>
+                </div>
+            </div>
+
+            <!-- 라운드 기록 리스트만 카드 내부에서 유연하게 스크롤 -->
+            <div class="flex-1 min-h-0 flex flex-col gap-1.5">
+                <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">라운드별 기록</h3>
+                <div id="resultHistoryList" class="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1 shrink-0">
+                <button type="button" onclick="resetToHome()"
+                        class="py-2.5 px-3 rounded-xl glass-sub hover:bg-white/10 text-xs font-bold text-white transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-sliders text-stageCyan text-[11px]"></i>
+                    <span>모드 변경</span>
+                </button>
+                <button type="button" onclick="startGame()"
+                        class="py-2.5 px-3 rounded-xl bg-gradient-to-r from-stageViolet to-stageCyan hover:brightness-110 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-glowViolet">
+                    <i class="fa-solid fa-rotate-right text-[11px]"></i>
+                    <span>다시 하기</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 하단 알림 토스트 -->
+    <div id="toastContainer" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-1.5 w-full max-w-sm px-3"></div>
+
+    <!-- 숨김 오디오 엘리먼트 -->
+    <audio id="audioPlayer" crossorigin="anonymous" preload="auto"></audio>
+
+    <script>
+        /**
+         * 1-1. 2024–2026 큐레이션 히트곡 데이터
+         */
+        const CURATED_SONGS_2024_2026 = [
+            // 2024 히트곡
+            { searchTerm: 'aespa Supernova', displayTitle: 'Supernova (슈퍼노바)', artistKo: '에스파', artistEn: 'aespa', year: '2024', acceptedAnswers: ['Supernova', '슈퍼노바'] },
+            { searchTerm: 'ROSÉ Bruno Mars APT.', displayTitle: 'APT. (아파트)', artistKo: '로제 & 브루노 마스', artistEn: 'ROSÉ & Bruno Mars', year: '2024', acceptedAnswers: ['APT', 'APT.', '아파트'] },
+            { searchTerm: 'G-DRAGON POWER', displayTitle: 'POWER (파워)', artistKo: '지드래곤', artistEn: 'G-DRAGON', year: '2024', acceptedAnswers: ['POWER', '파워'] },
+            { searchTerm: 'ILLIT Magnetic', displayTitle: 'Magnetic (마그네틱)', artistKo: '아일릿', artistEn: 'ILLIT', year: '2024', acceptedAnswers: ['Magnetic', '마그네틱'] },
+            { searchTerm: 'QWER 고민중독', displayTitle: '고민중독 (T.B.H)', artistKo: 'QWER', artistEn: 'QWER', year: '2024', acceptedAnswers: ['고민중독', 'T.B.H', 'TBH'] },
+            { searchTerm: 'DAY6 Welcome to the Show', displayTitle: 'Welcome to the Show', artistKo: '데이식스', artistEn: 'DAY6', year: '2024', acceptedAnswers: ['Welcome to the Show', '웰컴투더쇼'] },
+            { searchTerm: 'IVE 해야 HEYA', displayTitle: '해야 (HEYA)', artistKo: '아이브', artistEn: 'IVE', year: '2024', acceptedAnswers: ['해야', 'HEYA'] },
+            { searchTerm: 'NewJeans How Sweet', displayTitle: 'How Sweet (하우스윗)', artistKo: '뉴진스', artistEn: 'NewJeans', year: '2024', acceptedAnswers: ['How Sweet', '하우스윗'] },
+            { searchTerm: 'aespa Whiplash', displayTitle: 'Whiplash (위플래시)', artistKo: '에스파', artistEn: 'aespa', year: '2024', acceptedAnswers: ['Whiplash', '위플래시'] },
+            { searchTerm: 'RESCENE LOVE ATTACK', displayTitle: 'LOVE ATTACK (러브어택)', artistKo: '리센느', artistEn: 'RESCENE', year: '2024', acceptedAnswers: ['LOVE ATTACK', '러브어택'] },
+
+            // 2025 히트곡
+            { searchTerm: 'IVE REBEL HEART', displayTitle: 'REBEL HEART (레블하트)', artistKo: '아이브', artistEn: 'IVE', year: '2025', acceptedAnswers: ['REBEL HEART', '레블하트'] },
+            { searchTerm: 'JENNIE like JENNIE', displayTitle: 'like JENNIE (라이크 제니)', artistKo: '제니', artistEn: 'JENNIE', year: '2025', acceptedAnswers: ['like JENNIE', '라이크 제니', '라이크제니'] },
+            { searchTerm: 'G-DRAGON TOO BAD', displayTitle: 'TOO BAD (feat. Anderson .Paak)', artistKo: '지드래곤', artistEn: 'G-DRAGON', year: '2025', acceptedAnswers: ['TOO BAD', '투배드'] },
+            { searchTerm: 'BLACKPINK JUMP', displayTitle: 'JUMP (점프)', artistKo: '블랙핑크', artistEn: 'BLACKPINK', year: '2025', acceptedAnswers: ['JUMP', '점프'] },
+            { searchTerm: 'ILLIT 빌려온 고양이', displayTitle: '빌려온 고양이 (Do the Dance)', artistKo: '아일릿', artistEn: 'ILLIT', year: '2025', acceptedAnswers: ['빌려온 고양이', '빌려온고양이', 'Do the Dance'] },
+            { searchTerm: 'RESCENE Glow Up', displayTitle: 'Glow Up (글로우업)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['Glow Up', '글로우업'] },
+            { searchTerm: '이무진 청혼하지 않을 이유를 못 찾았어', displayTitle: '청혼하지 않을 이유를 못 찾았어', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2025', acceptedAnswers: ['청혼하지 않을 이유를 못 찾았어', '청혼하지않을이유를못찾았어'] },
+            { searchTerm: 'BOYNEXTDOOR 오늘만 I LOVE YOU', displayTitle: '오늘만 I LOVE YOU', artistKo: '보이넥스트도어', artistEn: 'BOYNEXTDOOR', year: '2025', acceptedAnswers: ['오늘만 I LOVE YOU', '오늘만아이러브유'] },
+
+            // 2026 최신곡
+            { searchTerm: 'BTS SWIM', displayTitle: 'SWIM (스윔)', artistKo: '방탄소년단', artistEn: 'BTS', year: '2026', acceptedAnswers: ['SWIM', '스윔'] },
+            { searchTerm: 'IVE BANG BANG', displayTitle: 'BANG BANG (뱅뱅)', artistKo: '아이브', artistEn: 'IVE', year: '2026', acceptedAnswers: ['BANG BANG', '뱅뱅'] },
+            { searchTerm: 'CORTIS REDRED', displayTitle: 'REDRED (레드레드)', artistKo: '코르티스', artistEn: 'CORTIS', year: '2026', acceptedAnswers: ['REDRED', '레드레드'] },
+            { searchTerm: 'KiiiKiii 404 New Era', displayTitle: '404 (New Era)', artistKo: '키키', artistEn: 'KiiiKiii', year: '2026', acceptedAnswers: ['404', 'New Era', '404 New Era'] }
+        ];
+
+        /**
+         * 1-2. 5칸 그룹별 프리셋 데이터 (빅뱅, 아이브, 리센느, DAY6+이무진, aespa+ILLIT)
+         */
+        const GROUP_PRESETS = {
+            bigbang: {
+                label: '빅뱅 (BIGBANG)',
+                fallbackQueries: ['BIGBANG 빅뱅'],
+                songs: [
+                    { searchTerm: 'BIGBANG 거짓말', displayTitle: '거짓말 (Lies)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2007', acceptedAnswers: ['거짓말', 'Lies'] },
+                    { searchTerm: 'BIGBANG 하루하루', displayTitle: '하루하루 (Haru Haru)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2008', acceptedAnswers: ['하루하루', 'Haru Haru'] },
+                    { searchTerm: 'BIGBANG 붉은 노을', displayTitle: '붉은 노을 (Sunset Glow)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2008', acceptedAnswers: ['붉은 노을', '붉은노을', 'Sunset Glow'] },
+                    { searchTerm: 'BIGBANG FANTASTIC BABY', displayTitle: 'FANTASTIC BABY (판타스틱 베이비)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2012', acceptedAnswers: ['FANTASTIC BABY', '판타스틱 베이비', '판타스틱베이비'] },
+                    { searchTerm: 'BIGBANG BLUE', displayTitle: 'BLUE (블루)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2012', acceptedAnswers: ['BLUE', '블루'] },
+                    { searchTerm: 'BIGBANG BAD BOY', displayTitle: 'BAD BOY (배드보이)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2012', acceptedAnswers: ['BAD BOY', '배드보이'] },
+                    { searchTerm: 'BIGBANG 뱅뱅뱅', displayTitle: '뱅뱅뱅 (BANG BANG BANG)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2015', acceptedAnswers: ['뱅뱅뱅', 'BANG BANG BANG'] },
+                    { searchTerm: 'BIGBANG LOSER', displayTitle: 'LOSER (루저)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2015', acceptedAnswers: ['LOSER', '루저'] },
+                    { searchTerm: 'BIGBANG 맨정신', displayTitle: '맨정신 (SOBER)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2015', acceptedAnswers: ['맨정신', 'SOBER'] },
+                    { searchTerm: 'BIGBANG 우리 사랑하지 말아요', displayTitle: '우리 사랑하지 말아요', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2015', acceptedAnswers: ['우리 사랑하지 말아요', '우리사랑하지말아요', 'LETS NOT FALL IN LOVE'] },
+                    { searchTerm: 'BIGBANG 에라 모르겠다', displayTitle: '에라 모르겠다 (FXXK IT)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2016', acceptedAnswers: ['에라 모르겠다', '에라모르겠다', 'FXXK IT'] },
+                    { searchTerm: 'BIGBANG LAST DANCE', displayTitle: 'LAST DANCE (라스트 댄스)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2016', acceptedAnswers: ['LAST DANCE', '라스트 댄스', '라스트댄스'] },
+                    { searchTerm: 'BIGBANG 꽃 길', displayTitle: '꽃 길 (FLOWER ROAD)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2018', acceptedAnswers: ['꽃 길', '꽃길', 'FLOWER ROAD'] },
+                    { searchTerm: 'BIGBANG 봄여름가을겨울', displayTitle: '봄여름가을겨울 (Still Life)', artistKo: '빅뱅', artistEn: 'BIGBANG', year: '2022', acceptedAnswers: ['봄여름가을겨울', 'Still Life'] }
+                ]
+            },
+            ive: {
+                label: '아이브 (IVE)',
+                fallbackQueries: ['IVE 아이브'],
+                songs: [
+                    { searchTerm: 'IVE ELEVEN', displayTitle: 'ELEVEN (일레븐)', artistKo: '아이브', artistEn: 'IVE', year: '2021', acceptedAnswers: ['ELEVEN', '일레븐'] },
+                    { searchTerm: 'IVE LOVE DIVE', displayTitle: 'LOVE DIVE (러브다이브)', artistKo: '아이브', artistEn: 'IVE', year: '2022', acceptedAnswers: ['LOVE DIVE', '러브다이브'] },
+                    { searchTerm: 'IVE After LIKE', displayTitle: 'After LIKE (애프터라이크)', artistKo: '아이브', artistEn: 'IVE', year: '2022', acceptedAnswers: ['After LIKE', '애프터라이크'] },
+                    { searchTerm: 'IVE Kitsch', displayTitle: 'Kitsch (키치)', artistKo: '아이브', artistEn: 'IVE', year: '2023', acceptedAnswers: ['Kitsch', '키치'] },
+                    { searchTerm: 'IVE I AM', displayTitle: 'I AM (아이엠)', artistKo: '아이브', artistEn: 'IVE', year: '2023', acceptedAnswers: ['I AM', '아이엠'] },
+                    { searchTerm: 'IVE Baddie', displayTitle: 'Baddie (배디)', artistKo: '아이브', artistEn: 'IVE', year: '2023', acceptedAnswers: ['Baddie', '배디'] },
+                    { searchTerm: 'IVE Either Way', displayTitle: 'Either Way (이더웨이)', artistKo: '아이브', artistEn: 'IVE', year: '2023', acceptedAnswers: ['Either Way', '이더웨이'] },
+                    { searchTerm: 'IVE Off The Record', displayTitle: 'Off The Record (오프더레코드)', artistKo: '아이브', artistEn: 'IVE', year: '2023', acceptedAnswers: ['Off The Record', '오프더레코드'] },
+                    { searchTerm: 'IVE 해야 HEYA', displayTitle: '해야 (HEYA)', artistKo: '아이브', artistEn: 'IVE', year: '2024', acceptedAnswers: ['해야', 'HEYA'] },
+                    { searchTerm: 'IVE Accendio', displayTitle: 'Accendio (아센디오)', artistKo: '아이브', artistEn: 'IVE', year: '2024', acceptedAnswers: ['Accendio', '아센디오'] },
+                    { searchTerm: 'IVE REBEL HEART', displayTitle: 'REBEL HEART (레블하트)', artistKo: '아이브', artistEn: 'IVE', year: '2025', acceptedAnswers: ['REBEL HEART', '레블하트'] },
+                    { searchTerm: 'IVE ATTITUDE', displayTitle: 'ATTITUDE (애티튜드)', artistKo: '아이브', artistEn: 'IVE', year: '2025', acceptedAnswers: ['ATTITUDE', '애티튜드'] },
+                    { searchTerm: 'IVE BANG BANG', displayTitle: 'BANG BANG (뱅뱅)', artistKo: '아이브', artistEn: 'IVE', year: '2026', acceptedAnswers: ['BANG BANG', '뱅뱅'] }
+                ]
+            },
+            rescene: {
+                label: '리센느 (RESCENE)',
+                fallbackQueries: ['RESCENE 리센느', 'RESCENE'],
+                songs: [
+                    { searchTerm: 'RESCENE YoYo', displayTitle: 'YoYo (요요)', artistKo: '리센느', artistEn: 'RESCENE', year: '2024', acceptedAnswers: ['YoYo', '요요'] },
+                    { searchTerm: 'RESCENE UhUh', displayTitle: 'UhUh (어어)', artistKo: '리센느', artistEn: 'RESCENE', year: '2024', acceptedAnswers: ['UhUh', '어어'] },
+                    { searchTerm: 'RESCENE LOVE ATTACK', displayTitle: 'LOVE ATTACK (러브어택)', artistKo: '리센느', artistEn: 'RESCENE', year: '2024', acceptedAnswers: ['LOVE ATTACK', '러브어택'] },
+                    { searchTerm: 'RESCENE Pinball', displayTitle: 'Pinball (핀볼)', artistKo: '리센느', artistEn: 'RESCENE', year: '2024', acceptedAnswers: ['Pinball', '핀볼'] },
+                    { searchTerm: 'RESCENE New World', displayTitle: 'New World (뉴월드)', artistKo: '리센느', artistEn: 'RESCENE', year: '2024', acceptedAnswers: ['New World', '뉴월드'] },
+                    { searchTerm: 'RESCENE Lucky you', displayTitle: 'Lucky you (럭키유)', artistKo: '리센느', artistEn: 'RESCENE', year: '2024', acceptedAnswers: ['Lucky you', '럭키유'] },
+                    { searchTerm: 'RESCENE Glow Up', displayTitle: 'Glow Up (글로우업)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['Glow Up', '글로우업'] },
+                    { searchTerm: 'RESCENE CRASH', displayTitle: 'CRASH (크래시)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['CRASH', '크래시'] },
+                    { searchTerm: 'RESCENE Going on', displayTitle: 'Going on (고잉온)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['Going on', '고잉온'] },
+                    { searchTerm: 'RESCENE In my lotion', displayTitle: 'In my lotion (인마이로션)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['In my lotion', '인마이로션'] },
+                    { searchTerm: 'RESCENE Deja Vu', displayTitle: 'Deja Vu (데자뷰)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['Deja Vu', '데자뷰'] },
+                    { searchTerm: 'RESCENE Heart Drop', displayTitle: 'Heart Drop (하트드롭)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['Heart Drop', '하트드롭'] },
+                    { searchTerm: 'RESCENE Bloom', displayTitle: 'Bloom (블룸)', artistKo: '리센느', artistEn: 'RESCENE', year: '2025', acceptedAnswers: ['Bloom', '블룸'] }
+                ]
+            },
+            day6_mujin: {
+                label: 'DAY6 + 이무진 (히트곡)',
+                fallbackQueries: ['DAY6', '이무진'],
+                songs: [
+                    { searchTerm: 'DAY6 예뻤어', displayTitle: '예뻤어 (You Were Beautiful)', artistKo: '데이식스', artistEn: 'DAY6', year: '2017', acceptedAnswers: ['예뻤어', 'You Were Beautiful'] },
+                    { searchTerm: 'DAY6 한 페이지가 될 수 있게', displayTitle: '한 페이지가 될 수 있게', artistKo: '데이식스', artistEn: 'DAY6', year: '2019', acceptedAnswers: ['한 페이지가 될 수 있게', '한페이지가될수있게', 'Time of Our Life'] },
+                    { searchTerm: 'DAY6 Welcome to the Show', displayTitle: 'Welcome to the Show', artistKo: '데이식스', artistEn: 'DAY6', year: '2024', acceptedAnswers: ['Welcome to the Show', '웰컴투더쇼'] },
+                    { searchTerm: 'DAY6 HAPPY', displayTitle: 'HAPPY (해피)', artistKo: '데이식스', artistEn: 'DAY6', year: '2024', acceptedAnswers: ['HAPPY', '해피'] },
+                    { searchTerm: 'DAY6 녹아내려요', displayTitle: '녹아내려요 (Melt Down)', artistKo: '데이식스', artistEn: 'DAY6', year: '2024', acceptedAnswers: ['녹아내려요', 'Melt Down'] },
+                    { searchTerm: 'DAY6 Zombie', displayTitle: 'Zombie (좀비)', artistKo: '데이식스', artistEn: 'DAY6', year: '2020', acceptedAnswers: ['Zombie', '좀비'] },
+                    { searchTerm: 'DAY6 Congratulations', displayTitle: 'Congratulations', artistKo: '데이식스', artistEn: 'DAY6', year: '2015', acceptedAnswers: ['Congratulations', '콩그레츄레이션'] },
+                    { searchTerm: 'DAY6 놓아 놓아 놓아', displayTitle: '놓아 놓아 놓아 (Letting Go)', artistKo: '데이식스', artistEn: 'DAY6', year: '2016', acceptedAnswers: ['놓아 놓아 놓아', '놓아놓아놓아', 'Letting Go'] },
+                    { searchTerm: '이무진 신호등', displayTitle: '신호등 (Traffic light)', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2021', acceptedAnswers: ['신호등', 'Traffic light'] },
+                    { searchTerm: '이무진 에피소드', displayTitle: '에피소드 (Episode)', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2023', acceptedAnswers: ['에피소드', 'Episode'] },
+                    { searchTerm: '이무진 잠깐 시간 될까', displayTitle: '잠깐 시간 될까', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2023', acceptedAnswers: ['잠깐 시간 될까', '잠깐시간될까', 'Ordinary Confession'] },
+                    { searchTerm: '이무진 청혼하지 않을 이유를 못 찾았어', displayTitle: '청혼하지 않을 이유를 못 찾았어', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2024', acceptedAnswers: ['청혼하지 않을 이유를 못 찾았어', '청혼하지않을이유를못찾았어'] },
+                    { searchTerm: '이무진 과제곡', displayTitle: '과제곡 (교수님 죄송합니다)', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2021', acceptedAnswers: ['과제곡', '교수님 죄송합니다'] },
+                    { searchTerm: '이무진 눈이 오잖아', displayTitle: '눈이 오잖아 (When it snows)', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2021', acceptedAnswers: ['눈이 오잖아', '눈이오잖아', 'When it snows'] },
+                    { searchTerm: '이무진 비와 당신', displayTitle: '비와 당신 (Rain and You)', artistKo: '이무진', artistEn: 'Lee Mujin', year: '2021', acceptedAnswers: ['비와 당신', '비와당신', 'Rain and You'] }
+                ]
+            },
+            aespa_illit: {
+                label: 'aespa + ILLIT (히트곡)',
+                fallbackQueries: ['aespa', 'ILLIT'],
+                songs: [
+                    { searchTerm: 'aespa Black Mamba', displayTitle: 'Black Mamba (블랙맘바)', artistKo: '에스파', artistEn: 'aespa', year: '2020', acceptedAnswers: ['Black Mamba', '블랙맘바'] },
+                    { searchTerm: 'aespa Next Level', displayTitle: 'Next Level (넥스트레벨)', artistKo: '에스파', artistEn: 'aespa', year: '2021', acceptedAnswers: ['Next Level', '넥스트레벨'] },
+                    { searchTerm: 'aespa Savage', displayTitle: 'Savage (새비지)', artistKo: '에스파', artistEn: 'aespa', year: '2021', acceptedAnswers: ['Savage', '새비지'] },
+                    { searchTerm: 'aespa Dreams Come True', displayTitle: 'Dreams Come True', artistKo: '에스파', artistEn: 'aespa', year: '2021', acceptedAnswers: ['Dreams Come True', '드림스컴트루'] },
+                    { searchTerm: 'aespa Spicy', displayTitle: 'Spicy (스파이시)', artistKo: '에스파', artistEn: 'aespa', year: '2023', acceptedAnswers: ['Spicy', '스파이시'] },
+                    { searchTerm: 'aespa Drama', displayTitle: 'Drama (드라마)', artistKo: '에스파', artistEn: 'aespa', year: '2023', acceptedAnswers: ['Drama', '드라마'] },
+                    { searchTerm: 'aespa Supernova', displayTitle: 'Supernova (슈퍼노바)', artistKo: '에스파', artistEn: 'aespa', year: '2024', acceptedAnswers: ['Supernova', '슈퍼노바'] },
+                    { searchTerm: 'aespa Armageddon', displayTitle: 'Armageddon (아마겟돈)', artistKo: '에스파', artistEn: 'aespa', year: '2024', acceptedAnswers: ['Armageddon', '아마겟돈'] },
+                    { searchTerm: 'aespa Whiplash', displayTitle: 'Whiplash (위플래시)', artistKo: '에스파', artistEn: 'aespa', year: '2024', acceptedAnswers: ['Whiplash', '위플래시'] },
+                    { searchTerm: 'aespa UP KARINA', displayTitle: 'UP (업)', artistKo: '에스파 (카리나)', artistEn: 'aespa', year: '2024', acceptedAnswers: ['UP', '업'] },
+                    { searchTerm: 'ILLIT Magnetic', displayTitle: 'Magnetic (마그네틱)', artistKo: '아일릿', artistEn: 'ILLIT', year: '2024', acceptedAnswers: ['Magnetic', '마그네틱'] },
+                    { searchTerm: 'ILLIT Lucky Girl Syndrome', displayTitle: 'Lucky Girl Syndrome', artistKo: '아일릿', artistEn: 'ILLIT', year: '2024', acceptedAnswers: ['Lucky Girl Syndrome', '럭키걸신드롬'] },
+                    { searchTerm: 'ILLIT Cherish My Love', displayTitle: 'Cherish (My Love) (체리쉬)', artistKo: '아일릿', artistEn: 'ILLIT', year: '2024', acceptedAnswers: ['Cherish', 'Cherish My Love', '체리쉬'] },
+                    { searchTerm: 'ILLIT Tick-Tack', displayTitle: 'Tick-Tack (틱택)', artistKo: '아일릿', artistEn: 'ILLIT', year: '2024', acceptedAnswers: ['Tick-Tack', 'Tick Tack', '틱택'] },
+                    { searchTerm: 'ILLIT Almond Chocolate', displayTitle: 'Almond Chocolate', artistKo: '아일릿', artistEn: 'ILLIT', year: '2025', acceptedAnswers: ['Almond Chocolate', '아몬드초콜릿'] },
+                    { searchTerm: 'ILLIT 빌려온 고양이', displayTitle: '빌려온 고양이 (Do the Dance)', artistKo: '아일릿', artistEn: 'ILLIT', year: '2025', acceptedAnswers: ['빌려온 고양이', '빌려온고양이', 'Do the Dance'] }
+                ]
+            }
+        };
+
+        /**
+         * 2. 전역 게임 상태
+         */
+        let gameState = {
+            mode: 'groups',
+            selectedGroup: 'bigbang',
+            yearFilter: 'all',
+            roundCount: 10,
+            duration: 3,
+            uploadedSongs: [],
+            playlist: [],
+            currentIndex: 0,
+            score: 0,
+            combo: 0,
+            maxCombo: 0,
+            replaysLeft: 2,
+            hintLevel: 0,
+            isPlaying: false,
+            roundAnswered: false,
+            history: []
+        };
+
+        let playbackTimer = null;
+        let progressRaf = null;
+        let currentPlayStartTime = 0;
+        let currentPlayMaxMs = 0;
+        let audioPlayToken = 0;
+        let pendingAudioCleanup = null;
+        const HIGHLIGHT_START_SEC = 7;
+
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        /**
+         * 3. 유틸리티 함수
+         */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colorMap = {
+                info: 'bg-surfaceElev/95 text-slate-100 border-stageCyan/40',
+                success: 'bg-emerald-950/95 text-emerald-200 border-stageEmerald/50',
+                error: 'bg-rose-950/95 text-rose-200 border-stageRose/50',
+                warn: 'bg-amber-950/95 text-amber-200 border-amber-400/50'
+            };
+            toast.className = `pointer-events-auto px-3.5 py-2 rounded-xl border text-[11px] sm:text-xs font-bold shadow-xl backdrop-blur-md animate-pop ${colorMap[type] || colorMap.info}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(6px)';
+                toast.style.transition = 'all 0.2s ease';
+                setTimeout(() => toast.remove(), 220);
+            }, 2500);
+        }
+
+        function shuffleArray(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function normalizeText(str) {
+            if (!str) return '';
+            return String(str)
+                .normalize('NFKC')
+                .toLowerCase()
+                .replace(/\([^)]*\)/g, '')
+                .replace(/\[[^\]]*\]/g, '')
+                .replace(/feat\.?.*$/i, '')
+                .replace(/[^a-z0-9가-힣ㄱ-ㅎㅏ-ㅣ]/g, '')
+                .trim();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[ch]);
+        }
+
+        function extractKoreanInitials(str) {
+            const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+            let result = '';
+            for (const ch of str) {
+                const code = ch.charCodeAt(0);
+                if (code >= 0xAC00 && code <= 0xD7A3) {
+                    const idx = Math.floor((code - 0xAC00) / (21 * 28));
+                    result += CHO[idx];
+                } else if (/[a-zA-Z0-9]/.test(ch)) {
+                    result += ch;
+                } else if (ch === ' ') {
+                    result += ' ';
+                }
+            }
+            return result.trim();
+        }
+
+        /**
+         * 4. iTunes Search API 연동 (JSONP + Fetch 이중 처리)
+         */
+        function searchItunesJsonp(term, country = 'KR', limit = 15) {
+            return new Promise((resolve) => {
+                const cbName = 'itunes_cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+                const script = document.createElement('script');
+                const timeoutId = setTimeout(() => {
+                    cleanup();
+                    resolve([]);
+                }, 5000);
+
+                function cleanup() {
+                    clearTimeout(timeoutId);
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                    try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+                }
+
+                window[cbName] = function(data) {
+                    cleanup();
+                    if (data && Array.isArray(data.results)) {
+                        resolve(data.results.filter(item => item.kind === 'song' && item.previewUrl));
+                    } else {
+                        resolve([]);
+                    }
+                };
+
+                const params = new URLSearchParams({
+                    term: term,
+                    media: 'music',
+                    entity: 'song',
+                    country: country,
+                    limit: String(limit),
+                    callback: cbName
+                });
+                script.src = `https://itunes.apple.com/search?${params.toString()}`;
+                script.onerror = () => {
+                    cleanup();
+                    resolve([]);
+                };
+                document.body.appendChild(script);
+            });
+        }
+
+        async function searchItunesTracks(term, country = 'KR', limit = 15) {
+            try {
+                const jsonpRes = await searchItunesJsonp(term, country, limit);
+                if (jsonpRes.length > 0) return jsonpRes;
+            } catch (e) {
+                // JSONP 실패 시 Fetch fallback 진행
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    term: term,
+                    media: 'music',
+                    entity: 'song',
+                    country: country,
+                    limit: String(limit)
+                });
+                const res = await fetch(`https://itunes.apple.com/search?${params.toString()}`);
+                if (!res.ok) return [];
+                const data = await res.json();
+                return (data.results || []).filter(item => item.kind === 'song' && item.previewUrl);
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function resolveCuratedSong(songMeta) {
+            let tracks = await searchItunesTracks(songMeta.searchTerm, 'KR', 8);
+            if (tracks.length === 0) {
+                tracks = await searchItunesTracks(`${songMeta.artistEn} ${songMeta.acceptedAnswers[0]}`, 'US', 8);
+            }
+            if (tracks.length === 0) return null;
+
+            const track = tracks[0];
+            const artwork300 = track.artworkUrl100
+                ? track.artworkUrl100.replace('100x100bb', '300x300bb')
+                : 'https://placehold.co/300x300/181e2e/06b6d4?text=MUSIC';
+
+            const apiCleanTitle = track.trackName.replace(/\([^)]*\)/g, '').trim();
+
+            return {
+                displayTitle: songMeta.displayTitle,
+                artistDisplay: `${songMeta.artistKo} (${songMeta.artistEn})`,
+                year: songMeta.year,
+                genre: track.primaryGenreName || 'K-Pop',
+                previewUrl: track.previewUrl,
+                artworkUrl: artwork300,
+                acceptedAnswers: [...songMeta.acceptedAnswers, apiCleanTitle, track.trackName]
+            };
+        }
+
+        /**
+         * 5. 로비 화면 UI 제어
+         */
+        function switchMode(mode) {
+            gameState.mode = mode;
+            const tabs = {
+                groups: document.getElementById('tabGroups'),
+                curated: document.getElementById('tabCurated'),
+                search: document.getElementById('tabSearch'),
+                upload: document.getElementById('tabUpload')
+            };
+            const panels = {
+                groups: document.getElementById('panelGroups'),
+                curated: document.getElementById('panelCurated'),
+                search: document.getElementById('panelSearch'),
+                upload: document.getElementById('panelUpload')
+            };
+
+            Object.keys(tabs).forEach(k => {
+                if (k === mode) {
+                    tabs[k].className = 'py-1.5 px-1.5 rounded-lg bg-gradient-to-r from-stageViolet to-indigo-600 text-white font-extrabold text-[11px] sm:text-xs transition flex items-center justify-center gap-1 shadow-glowViolet';
+                    panels[k].classList.remove('hidden');
+                } else {
+                    tabs[k].className = 'py-1.5 px-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.04] font-bold text-[11px] sm:text-xs transition flex items-center justify-center gap-1';
+                    panels[k].classList.add('hidden');
+                }
+            });
+        }
+
+        function selectGroupPreset(groupKey) {
+            gameState.selectedGroup = groupKey;
+            const preset = GROUP_PRESETS[groupKey];
+            if (preset) {
+                document.getElementById('groupSelectedBadge').textContent = preset.label;
+            }
+
+            document.querySelectorAll('.group-card').forEach(card => {
+                const key = card.getAttribute('data-group');
+                const isWide = key === 'aespa_illit' ? ' col-span-2' : '';
+                if (key === groupKey) {
+                    card.className = `group-card text-left p-2 sm:p-2.5 rounded-xl border-2 border-stageCyan bg-stageCyan/10 transition flex flex-col justify-between gap-0.5 shadow-glowCyan${isWide}`;
+                } else {
+                    card.className = `group-card text-left p-2 sm:p-2.5 rounded-xl glass-sub hover:border-white/20 hover:bg-white/[0.06] transition flex flex-col justify-between gap-0.5${isWide}`;
+                }
+            });
+        }
+
+        function selectYearFilter(year) {
+            gameState.yearFilter = year;
+            document.querySelectorAll('.year-btn').forEach(btn => {
+                if (btn.getAttribute('data-year') === year) {
+                    btn.className = 'year-btn py-2 px-2 rounded-xl border-2 border-stageCyan bg-stageCyan/10 text-[11px] font-extrabold text-white transition';
+                } else {
+                    btn.className = 'year-btn py-2 px-2 rounded-xl glass-sub hover:border-white/20 text-[11px] font-bold text-slate-300 transition';
+                }
+            });
+        }
+
+        function selectRoundCount(count) {
+            gameState.roundCount = count;
+            document.querySelectorAll('.rc-btn').forEach(btn => {
+                if (Number(btn.getAttribute('data-rc')) === count) {
+                    btn.className = 'rc-btn px-2.5 py-1 rounded-md bg-stageCyan text-slate-950 text-[11px] font-extrabold transition';
+                } else {
+                    btn.className = 'rc-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white text-[11px] font-bold transition';
+                }
+            });
+        }
+
+        function selectDuration(sec) {
+            gameState.duration = sec;
+            document.querySelectorAll('.dur-btn').forEach(btn => {
+                const d = Number(btn.getAttribute('data-dur'));
+                const titleEl = btn.querySelector('span.text-xs');
+                const descEl = btn.querySelector('p');
+                if (d === sec) {
+                    btn.className = 'dur-btn p-2 rounded-xl border-2 border-stageCyan bg-stageCyan/10 text-left transition shadow-glowCyan';
+                    if (titleEl && d !== 1) titleEl.className = 'text-xs font-black text-stageCyan';
+                    if (descEl) descEl.className = 'text-[10px] text-slate-300 mt-0.5 truncate';
+                } else {
+                    btn.className = 'dur-btn p-2 rounded-xl glass-sub hover:border-white/20 text-left transition';
+                    if (titleEl && d !== 1) titleEl.className = 'text-xs font-black text-white';
+                    if (descEl) descEl.className = 'text-[10px] text-slate-400 mt-0.5 truncate';
+                }
+            });
+        }
+
+        function quickSearch(keyword) {
+            const input = document.getElementById('artistSearchInput');
+            input.value = keyword;
+            input.focus();
+        }
+
+        /**
+         * 6. 로컬 MP3 / WAV 드래그 앤 드롭 및 파일 목록 관리
+         */
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-stageCyan', 'bg-stageCyan/10');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-stageCyan', 'bg-stageCyan/10');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-stageCyan', 'bg-stageCyan/10');
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                addAudioFiles(e.dataTransfer.files);
+            }
+        });
+
+        function handleFileSelect(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                addAudioFiles(e.target.files);
+                e.target.value = '';
+            }
+        }
+
+        function addAudioFiles(fileList) {
+            let added = 0;
+            let skipped = 0;
+            const existing = new Set(gameState.uploadedSongs.map(song => song.displayTitle.toLowerCase()));
+
+            for (const file of fileList) {
+                if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|ogg)$/i.test(file.name)) {
+                    skipped++;
+                    continue;
+                }
+                const cleanTitle = file.name.replace(/\.[^/.]+$/, '').trim();
+                if (!cleanTitle || existing.has(cleanTitle.toLowerCase())) {
+                    skipped++;
+                    continue;
+                }
+                const objectUrl = URL.createObjectURL(file);
+                gameState.uploadedSongs.push({
+                    displayTitle: cleanTitle,
+                    artistDisplay: '로컬 오디오 파일',
+                    year: 'LOCAL',
+                    genre: 'Local File',
+                    previewUrl: objectUrl,
+                    artworkUrl: 'https://placehold.co/300x300/181e2e/06b6d4?text=MP3',
+                    acceptedAnswers: [cleanTitle]
+                });
+                existing.add(cleanTitle.toLowerCase());
+                added++;
+            }
+
+            if (added > 0) {
+                showToast(`${added}개의 음원이 추가되었습니다.${skipped ? ` (중복/미지원 ${skipped}개 제외)` : ''}`, 'success');
+                renderUploadedList();
+            } else {
+                showToast('새로 추가할 수 있는 오디오 파일이 없습니다. 중복 파일 또는 미지원 형식인지 확인해주세요.', 'warn');
+            }
+        }
+
+        function removeUploadedSong(idx) {
+            const target = gameState.uploadedSongs[idx];
+            if (target && target.previewUrl && target.previewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(target.previewUrl);
+            }
+            gameState.uploadedSongs.splice(idx, 1);
+            renderUploadedList();
+        }
+
+        function renderUploadedList() {
+            const listEl = document.getElementById('uploadedFileList');
+            if (gameState.uploadedSongs.length === 0) {
+                listEl.classList.add('hidden');
+                listEl.innerHTML = '';
+                return;
+            }
+            listEl.classList.remove('hidden');
+            listEl.innerHTML = gameState.uploadedSongs.map((item, idx) => `
+                <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg glass-sub text-[11px]">
+                    <span class="font-bold text-slate-200 truncate pr-2">
+                        <i class="fa-solid fa-music text-stageCyan mr-1.5"></i>${escapeHtml(item.displayTitle)}
+                    </span>
+                    <button type="button" onclick="removeUploadedSong(${idx})" class="text-slate-400 hover:text-stageRose transition px-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * 7. 게임 시작 및 플레이리스트 구성
+         */
+        async function startGame() {
+            const startButton = document.getElementById('startGameBtn');
+            if (startButton.disabled) return;
+            startButton.disabled = true;
+            stopAudio();
+
+            if (gameState.mode === 'search') {
+                const query = document.getElementById('artistSearchInput').value.trim();
+                if (!query) {
+                    showToast('검색할 아티스트 또는 키워드를 입력해주세요.', 'warn');
+                    document.getElementById('artistSearchInput').focus();
+                    startButton.disabled = false;
+                    return;
+                }
+            }
+
+            if (gameState.mode === 'upload' && gameState.uploadedSongs.length === 0) {
+                showToast('먼저 MP3/WAV 파일을 1개 이상 업로드해주세요.', 'warn');
+                startButton.disabled = false;
+                return;
+            }
+
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('homeBtn').classList.remove('hidden');
+
+            const loadingSub = document.getElementById('loadingSub');
+            const loadingBar = document.getElementById('loadingBar');
+            loadingBar.style.width = '12%';
+
+            if (gameState.mode === 'groups') {
+                const preset = GROUP_PRESETS[gameState.selectedGroup];
+                const shuffledPool = shuffleArray(preset.songs);
+                const targetCount = Math.min(gameState.roundCount, shuffledPool.length);
+                const resolvedList = [];
+                const seenTitles = new Set();
+
+                for (let i = 0; i < shuffledPool.length && resolvedList.length < targetCount; i++) {
+                    loadingSub.textContent = `[${preset.label}] 히트곡 매칭 중... (${resolvedList.length} / ${targetCount})`;
+                    loadingBar.style.width = `${Math.round(((resolvedList.length + 0.5) / targetCount) * 100)}%`;
+
+                    const resolved = await resolveCuratedSong(shuffledPool[i]);
+                    if (resolved && resolved.previewUrl) {
+                        const norm = normalizeText(resolved.displayTitle);
+                        if (!seenTitles.has(norm)) {
+                            seenTitles.add(norm);
+                            resolvedList.push(resolved);
+                        }
+                    }
+                }
+
+                if (resolvedList.length < targetCount && preset.fallbackQueries) {
+                    for (const fq of preset.fallbackQueries) {
+                        if (resolvedList.length >= targetCount) break;
+                        const extraTracks = await searchItunesTracks(fq, 'KR', 20);
+                        for (const t of shuffleArray(extraTracks)) {
+                            if (resolvedList.length >= targetCount) break;
+                            const cleanName = t.trackName.replace(/\([^)]*\)/g, '').trim();
+                            const norm = normalizeText(cleanName);
+                            if (!norm || seenTitles.has(norm)) continue;
+                            seenTitles.add(norm);
+
+                            const releaseYear = t.releaseDate ? t.releaseDate.substring(0, 4) : '2024+';
+                            const artwork300 = t.artworkUrl100
+                                ? t.artworkUrl100.replace('100x100bb', '300x300bb')
+                                : 'https://placehold.co/300x300/181e2e/06b6d4?text=MUSIC';
+
+                            resolvedList.push({
+                                displayTitle: t.trackName,
+                                artistDisplay: t.artistName,
+                                year: releaseYear,
+                                genre: t.primaryGenreName || 'K-Pop',
+                                previewUrl: t.previewUrl,
+                                artworkUrl: artwork300,
+                                acceptedAnswers: [cleanName, t.trackName]
+                            });
+                        }
+                    }
+                }
+
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                startButton.disabled = false;
+
+                if (resolvedList.length === 0) {
+                    document.getElementById('setupScreen').classList.remove('hidden');
+                    showToast('음원 서버 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.', 'error');
+                    return;
+                }
+
+                gameState.playlist = shuffleArray(resolvedList);
+                launchGameUI();
+
+            } else if (gameState.mode === 'curated') {
+                const pool = gameState.yearFilter === 'all'
+                    ? CURATED_SONGS_2024_2026
+                    : CURATED_SONGS_2024_2026.filter(s => s.year === gameState.yearFilter);
+
+                const shuffledPool = shuffleArray(pool);
+                const targetCount = Math.min(gameState.roundCount, shuffledPool.length);
+                const resolvedList = [];
+
+                for (let i = 0; i < shuffledPool.length && resolvedList.length < targetCount; i++) {
+                    loadingSub.textContent = `차트 음원 불러오는 중... (${resolvedList.length} / ${targetCount})`;
+                    loadingBar.style.width = `${Math.round(((resolvedList.length + 0.5) / targetCount) * 100)}%`;
+
+                    const resolved = await resolveCuratedSong(shuffledPool[i]);
+                    if (resolved && resolved.previewUrl) {
+                        resolvedList.push(resolved);
+                    }
+                }
+
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                startButton.disabled = false;
+
+                if (resolvedList.length === 0) {
+                    document.getElementById('setupScreen').classList.remove('hidden');
+                    showToast('음원 서버 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.', 'error');
+                    return;
+                }
+
+                gameState.playlist = shuffleArray(resolvedList);
+                launchGameUI();
+
+            } else if (gameState.mode === 'search') {
+                const query = document.getElementById('artistSearchInput').value.trim();
+                loadingSub.textContent = `"${query}" 관련 곡 검색 중...`;
+                loadingBar.style.width = '55%';
+
+                let tracks = await searchItunesTracks(query, 'KR', 25);
+                if (tracks.length < 5) {
+                    const usTracks = await searchItunesTracks(query, 'US', 20);
+                    tracks = [...tracks, ...usTracks];
+                }
+
+                loadingBar.style.width = '100%';
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                startButton.disabled = false;
+
+                const uniqueMap = new Map();
+                for (const t of tracks) {
+                    const cleanName = t.trackName.replace(/\([^)]*\)/g, '').trim();
+                    const key = normalizeText(cleanName);
+                    if (key && !uniqueMap.has(key)) {
+                        const releaseYear = t.releaseDate ? t.releaseDate.substring(0, 4) : '';
+                        const artwork300 = t.artworkUrl100
+                            ? t.artworkUrl100.replace('100x100bb', '300x300bb')
+                            : 'https://placehold.co/300x300/181e2e/06b6d4?text=MUSIC';
+
+                        uniqueMap.set(key, {
+                            displayTitle: t.trackName,
+                            artistDisplay: t.artistName,
+                            year: releaseYear,
+                            genre: t.primaryGenreName || 'Music',
+                            previewUrl: t.previewUrl,
+                            artworkUrl: artwork300,
+                            acceptedAnswers: [cleanName, t.trackName]
+                        });
+                    }
+                }
+
+                const searchList = shuffleArray(Array.from(uniqueMap.values())).slice(0, 10);
+                if (searchList.length === 0) {
+                    document.getElementById('setupScreen').classList.remove('hidden');
+                    showToast(`"${query}"에 대한 재생 가능한 음원을 찾지 못했습니다.`, 'error');
+                    return;
+                }
+
+                gameState.playlist = searchList;
+                launchGameUI();
+
+            } else if (gameState.mode === 'upload') {
+                loadingBar.style.width = '100%';
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                startButton.disabled = false;
+                gameState.playlist = shuffleArray(gameState.uploadedSongs);
+                launchGameUI();
+            }
+        }
+
+        function launchGameUI() {
+            document.getElementById('startGameBtn').disabled = false;
+            gameState.currentIndex = 0;
+            gameState.score = 0;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.history = [];
+
+            const multMap = { 1: 3.0, 3: 2.0, 5: 1.5, 30: 1.0 };
+            const mult = multMap[gameState.duration] || 1.5;
+            const durLabel = gameState.duration === 30 ? '전체 30초' : `${gameState.duration}초 듣기`;
+            document.getElementById('difficultyBadge').textContent = `${durLabel} (×${mult.toFixed(1)})`;
+
+            if (gameState.mode === 'groups') {
+                document.getElementById('modeBadge').textContent = GROUP_PRESETS[gameState.selectedGroup].label;
+            } else if (gameState.mode === 'curated') {
+                document.getElementById('modeBadge').textContent = gameState.yearFilter === 'all' ? '2024–2026 차트' : `${gameState.yearFilter} 히트곡`;
+            } else if (gameState.mode === 'search') {
+                document.getElementById('modeBadge').textContent = `검색: ${document.getElementById('artistSearchInput').value.trim()}`;
+            } else {
+                document.getElementById('modeBadge').textContent = '내 MP3 모드';
+            }
+
+            document.getElementById('gameScreen').classList.remove('hidden');
+            loadRound();
+        }
+
+        /**
+         * 8. 라운드 진행 및 오디오 재생
+         */
+        function loadRound() {
+            gameState.replaysLeft = 2;
+            gameState.hintLevel = 0;
+            gameState.roundAnswered = false;
+
+            const total = gameState.playlist.length;
+            const current = gameState.currentIndex + 1;
+
+            document.getElementById('roundIndicator').textContent = `${current} / ${total}`;
+            document.getElementById('comboIndicator').textContent = `${gameState.combo} 🔥`;
+            document.getElementById('scoreIndicator').textContent = gameState.score.toLocaleString();
+            document.getElementById('replayCountBadge').textContent = `${gameState.replaysLeft}`;
+            document.getElementById('replayBtn').disabled = false;
+            document.getElementById('playProgressBar').style.width = '0%';
+            document.getElementById('playbackStatusText').textContent = '음원 준비 중';
+            document.getElementById('playbackTimerText').textContent = `0.0s / ${Number(gameState.duration).toFixed(1)}s`;
+            document.getElementById('fromStartBtn').disabled = false;
+
+            document.getElementById('hintBox').classList.add('hidden');
+            document.getElementById('hintLine1').textContent = '';
+            document.getElementById('hintLine2').classList.add('hidden');
+            document.getElementById('hintLine2').textContent = '';
+            document.getElementById('hintBtn').disabled = false;
+            document.getElementById('hintBtnText').textContent = '힌트 1';
+
+            document.getElementById('feedbackBox').classList.add('hidden');
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').disabled = false;
+            document.getElementById('submitAnswerBtn').disabled = false;
+            document.getElementById('skipBtn').disabled = false;
+            document.getElementById('answerInput').focus();
+
+            playSegment(gameState.duration, false);
+        }
+
+        function playSegment(seconds, fromZero = false) {
+            stopAudio();
+            const token = audioPlayToken;
+            const song = gameState.playlist[gameState.currentIndex];
+            if (!song || !song.previewUrl) {
+                showToast('재생할 음원 주소를 찾지 못했습니다.', 'error');
+                return;
+            }
+
+            const status = document.getElementById('playbackStatusText');
+            const bar = document.getElementById('playProgressBar');
+            const timerText = document.getElementById('playbackTimerText');
+            bar.style.width = '0%';
+            timerText.textContent = `0.0s / ${Number(seconds).toFixed(1)}s`;
+            status.textContent = '음원 불러오는 중...';
+
+            const cleanup = () => {
+                audioPlayer.removeEventListener('loadedmetadata', onReady);
+                audioPlayer.removeEventListener('error', onError);
+                if (pendingAudioCleanup === cleanup) pendingAudioCleanup = null;
+            };
+            const onError = () => {
+                cleanup();
+                if (token !== audioPlayToken || gameState.roundAnswered) return;
+                stopAudio();
+                status.textContent = '음원을 재생할 수 없습니다.';
+                showToast('음원 재생에 실패했습니다. 네트워크 또는 미리듣기 링크를 확인해주세요.', 'error');
+            };
+            const onReady = async () => {
+                cleanup();
+                if (token !== audioPlayToken || gameState.roundAnswered) return;
+                const maxAvail = (audioPlayer.duration && Number.isFinite(audioPlayer.duration)) ? audioPlayer.duration : 30;
+                let startAt = 0;
+                if (!fromZero && gameState.mode !== 'upload' && maxAvail > HIGHLIGHT_START_SEC + 2) {
+                    startAt = HIGHLIGHT_START_SEC;
+                }
+                if (startAt >= maxAvail) startAt = 0;
+                const allowedSec = Math.min(seconds, Math.max(0.5, maxAvail - startAt));
+                currentPlayMaxMs = allowedSec * 1000;
+                try { audioPlayer.currentTime = startAt; } catch (err) {}
+
+                try {
+                    await audioPlayer.play();
+                    if (token !== audioPlayToken || gameState.roundAnswered) {
+                        audioPlayer.pause();
+                        return;
+                    }
+                    gameState.isPlaying = true;
+                    currentPlayStartTime = performance.now();
+                    document.getElementById('equalizerBox').classList.add('eq-active');
+                    status.textContent = fromZero ? '0초부터 재생 중...' : '하이라이트 재생 중...';
+                    updateProgressLoop(allowedSec);
+                    playbackTimer = setTimeout(() => {
+                        if (token !== audioPlayToken) return;
+                        stopAudio();
+                        if (!gameState.roundAnswered) status.textContent = '청음 종료 · 제목을 입력하세요';
+                    }, currentPlayMaxMs);
+                } catch (err) {
+                    if (token !== audioPlayToken) return;
+                    stopAudio();
+                    status.textContent = '재생이 차단되었습니다. 다시 듣기를 눌러주세요.';
+                    showToast('브라우저가 재생을 차단했습니다. 다시 재생 버튼을 눌러주세요.', 'warn');
+                }
+            };
+
+            pendingAudioCleanup = cleanup;
+            audioPlayer.addEventListener('loadedmetadata', onReady, { once: true });
+            audioPlayer.addEventListener('error', onError, { once: true });
+            audioPlayer.src = song.previewUrl;
+            audioPlayer.load();
+            if (audioPlayer.readyState >= 1) onReady();
+        }
+
+        function updateProgressLoop(totalSec) {
+            const bar = document.getElementById('playProgressBar');
+            const timerText = document.getElementById('playbackTimerText');
+            const tick = () => {
+                if (!gameState.isPlaying) return;
+                const elapsedMs = Math.min(currentPlayMaxMs, performance.now() - currentPlayStartTime);
+                const pct = currentPlayMaxMs > 0 ? (elapsedMs / currentPlayMaxMs) * 100 : 0;
+                bar.style.width = `${pct}%`;
+                timerText.textContent = `${(elapsedMs / 1000).toFixed(1)}s / ${totalSec.toFixed(1)}s`;
+                if (elapsedMs < currentPlayMaxMs) progressRaf = requestAnimationFrame(tick);
+            };
+            progressRaf = requestAnimationFrame(tick);
+        }
+
+        function stopAudio() {
+            audioPlayToken++;
+            gameState.isPlaying = false;
+            if (pendingAudioCleanup) pendingAudioCleanup();
+            if (playbackTimer) {
+                clearTimeout(playbackTimer);
+                playbackTimer = null;
+            }
+            if (progressRaf) {
+                cancelAnimationFrame(progressRaf);
+                progressRaf = null;
+            }
+            try { audioPlayer.pause(); } catch (e) {}
+            document.getElementById('equalizerBox').classList.remove('eq-active');
+        }
+
+        function replayCurrentSong(fromZero) {
+            if (gameState.roundAnswered) return;
+            if (gameState.replaysLeft <= 0) {
+                showToast('다시 듣기 횟수를 모두 사용했습니다.', 'warn');
+                return;
+            }
+            gameState.replaysLeft--;
+            document.getElementById('replayCountBadge').textContent = `${gameState.replaysLeft}`;
+            if (gameState.replaysLeft === 0) {
+                document.getElementById('replayBtn').disabled = true;
+            }
+            playSegment(gameState.duration, fromZero);
+        }
+
+        function playFullPreview() {
+            playSegment(30, false);
+        }
+
+        /**
+         * 9. 2단계 힌트 시스템
+         */
+        function useNextHint() {
+            if (gameState.roundAnswered) return;
+            const song = gameState.playlist[gameState.currentIndex];
+            const hintBox = document.getElementById('hintBox');
+            const line1 = document.getElementById('hintLine1');
+            const line2 = document.getElementById('hintLine2');
+            const btn = document.getElementById('hintBtn');
+            const btnText = document.getElementById('hintBtnText');
+
+            hintBox.classList.remove('hidden');
+
+            if (gameState.hintLevel === 0) {
+                gameState.hintLevel = 1;
+                const yearStr = song.year ? ` · ${song.year}` : '';
+                line1.innerHTML = `<span class="text-slate-400">힌트1:</span> <span class="text-white font-bold">${escapeHtml(song.artistDisplay)}</span><span class="text-stageCyan">${escapeHtml(yearStr)}</span>`;
+                btnText.textContent = '힌트 2';
+            } else if (gameState.hintLevel === 1) {
+                gameState.hintLevel = 2;
+                const primaryTitle = song.acceptedAnswers[0] || song.displayTitle;
+                const initials = extractKoreanInitials(primaryTitle);
+                const compactTitle = primaryTitle.replace(/\s+/g, '');
+                const noSpaceLen = [...compactTitle].length;
+                const titleHint = initials || `${compactTitle.slice(0, 1).toUpperCase()}${'＿'.repeat(Math.max(0, noSpaceLen - 1))}`;
+                line2.classList.remove('hidden');
+                line2.innerHTML = `<span class="text-amber-300">힌트2:</span> <span class="tracking-widest text-white">${escapeHtml(titleHint)}</span> <span class="text-[10px] text-slate-400 font-normal">(${noSpaceLen}자)</span>`;
+                btn.disabled = true;
+                btnText.textContent = '완료';
+            }
+        }
+
+        /**
+         * 10. 정답 판정 및 라운드 종료 처리
+         */
+        function submitAnswer(e) {
+            e.preventDefault();
+            if (gameState.roundAnswered) return;
+
+            const inputEl = document.getElementById('answerInput');
+            const rawInput = inputEl.value.trim();
+            if (!rawInput) {
+                showToast('정답을 입력해주세요.', 'warn');
+                return;
+            }
+
+            const normUser = normalizeText(rawInput);
+            if (!normUser) return;
+
+            const song = gameState.playlist[gameState.currentIndex];
+            const accepted = Array.isArray(song.acceptedAnswers) ? song.acceptedAnswers : [song.displayTitle];
+            const isMatch = accepted.some(ans => {
+                const normAns = normalizeText(ans);
+                return normAns.length > 0 && normUser === normAns;
+            });
+
+            if (isMatch) {
+                handleCorrect(rawInput);
+            } else {
+                inputEl.classList.add('animate-shake', 'border-stageRose');
+                showToast(`"${rawInput}" — 오답! 힌트를 활용해보세요.`, 'error');
+                setTimeout(() => {
+                    inputEl.classList.remove('animate-shake', 'border-stageRose');
+                }, 420);
+                inputEl.select();
+            }
+        }
+
+        function handleCorrect(userAnswer) {
+            gameState.roundAnswered = true;
+            stopAudio();
+
+            const multMap = { 1: 3.0, 3: 2.0, 5: 1.5, 30: 1.0 };
+            const mult = multMap[gameState.duration] || 1.5;
+            const comboBonus = gameState.combo * 20;
+            const hintPenalty = gameState.hintLevel * 25;
+            const earned = Math.max(30, Math.round(100 * mult + comboBonus - hintPenalty));
+
+            gameState.score += earned;
+            gameState.combo += 1;
+            if (gameState.combo > gameState.maxCombo) {
+                gameState.maxCombo = gameState.combo;
+            }
+
+            gameState.history.push({
+                song: gameState.playlist[gameState.currentIndex],
+                correct: true,
+                userAnswer,
+                earned
+            });
+
+            document.getElementById('scoreIndicator').textContent = gameState.score.toLocaleString();
+            document.getElementById('comboIndicator').textContent = `${gameState.combo} 🔥`;
+
+            showFeedbackCard(true, `+${earned}점 (콤보+${comboBonus})`, 'bg-emerald-950/60 border-stageEmerald/40', 'bg-stageEmerald text-slate-950', '정답!');
+        }
+
+        function skipRound() {
+            if (gameState.roundAnswered) return;
+            gameState.roundAnswered = true;
+            stopAudio();
+
+            gameState.combo = 0;
+            document.getElementById('comboIndicator').textContent = '0 🔥';
+
+            gameState.history.push({
+                song: gameState.playlist[gameState.currentIndex],
+                correct: false,
+                userAnswer: '포기',
+                earned: 0
+            });
+
+            showFeedbackCard(false, '0점', 'bg-rose-950/50 border-stageRose/40', 'bg-stageRose text-white', '정답 공개');
+        }
+
+        function showFeedbackCard(isCorrect, pointsText, boxClass, badgeClass, badgeLabel) {
+            const song = gameState.playlist[gameState.currentIndex];
+            document.getElementById('answerInput').disabled = true;
+            document.getElementById('submitAnswerBtn').disabled = true;
+            document.getElementById('skipBtn').disabled = true;
+            document.getElementById('replayBtn').disabled = true;
+            document.getElementById('hintBtn').disabled = true;
+
+            const box = document.getElementById('feedbackBox');
+            box.className = `rounded-2xl p-2.5 sm:p-3.5 border animate-pop shrink-0 ${boxClass}`;
+            box.classList.remove('hidden');
+
+            const badge = document.getElementById('feedbackBadge');
+            badge.className = `px-2 py-0.5 rounded text-[10px] font-black shrink-0 ${badgeClass}`;
+            badge.textContent = badgeLabel;
+
+            document.getElementById('feedbackPoints').textContent = pointsText;
+            document.getElementById('revealedArtwork').src = song.artworkUrl;
+            document.getElementById('revealedTitle').textContent = song.displayTitle;
+            document.getElementById('revealedArtist').textContent = `${song.artistDisplay}${song.year ? ' · ' + song.year : ''}`;
+
+            const isLast = gameState.currentIndex >= gameState.playlist.length - 1;
+            document.getElementById('nextRoundBtn').innerHTML = isLast
+                ? '<span>결과</span><i class="fa-solid fa-flag-checkered text-[10px]"></i>'
+                : '<span>다음</span><i class="fa-solid fa-arrow-right text-[10px]"></i>';
+        }
+
+        function nextRound() {
+            stopAudio();
+            if (gameState.currentIndex < gameState.playlist.length - 1) {
+                gameState.currentIndex++;
+                loadRound();
+            } else {
+                showResultScreen();
+            }
+        }
+
+        /**
+         * 11. 최종 결과 리포트
+         */
+        function showResultScreen() {
+            stopAudio();
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+
+            const total = gameState.history.length;
+            const correctCount = gameState.history.filter(h => h.correct).length;
+            const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+
+            let grade = 'C';
+            let comment = '조금씩 귀가 트이고 있어요! 다음엔 콤보에 도전해보세요.';
+            if (accuracy >= 90) {
+                grade = 'S';
+                comment = '완벽한 절대음감! 차트와 그룹 디스코그래피를 완벽히 장악하셨습니다.';
+            } else if (accuracy >= 70) {
+                grade = 'A';
+                comment = '대단한 청음 실력이에요! 핵심 멜로디를 아주 빠르게 캐치하셨습니다.';
+            } else if (accuracy >= 45) {
+                grade = 'B';
+                comment = '좋은 페이스로 맞히고 있어요! 힌트와 난이도를 조절해 고득점을 노려보세요.';
+            }
+
+            document.getElementById('resultGrade').textContent = grade;
+            document.getElementById('resultComment').textContent = comment;
+            document.getElementById('finalScore').textContent = gameState.score.toLocaleString();
+            document.getElementById('finalAccuracy').textContent = `${accuracy}% (${correctCount}/${total})`;
+            document.getElementById('finalMaxCombo').textContent = `${gameState.maxCombo} 🔥`;
+
+            const listEl = document.getElementById('resultHistoryList');
+            listEl.innerHTML = gameState.history.map((item, idx) => `
+                <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl glass-sub">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${item.correct ? 'bg-stageEmerald/20 text-stageEmerald' : 'bg-stageRose/20 text-stageRose'}">
+                            ${item.correct ? '✓' : '✕'}
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[11px] sm:text-xs font-bold text-white truncate">Q${idx + 1}. ${escapeHtml(item.song.displayTitle)}</p>
+                            <p class="text-[10px] text-slate-400 truncate">${escapeHtml(item.song.artistDisplay)} · 입력: ${escapeHtml(item.userAnswer)}</p>
+                        </div>
+                    </div>
+                    <span class="text-[11px] font-black shrink-0 ${item.correct ? 'text-stageEmerald' : 'text-slate-500'}">
+                        ${item.correct ? '+' + item.earned + '점' : '0점'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function resetToHome() {
+            stopAudio();
+            document.getElementById('startGameBtn').disabled = false;
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.remove('hidden');
+            document.getElementById('homeBtn').classList.add('hidden');
+        }
+
+        // 스페이스바 단축키로 다시 듣기 지원
+        document.addEventListener('keydown', (e) => {
+            const active = document.activeElement;
+            const typing = active && (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT'].includes(active.tagName) || active.isContentEditable);
+            if (e.code === 'Space' && !typing) {
+                const isGameVisible = !document.getElementById('gameScreen').classList.contains('hidden');
+                if (isGameVisible && !gameState.roundAnswered) {
+                    e.preventDefault();
+                    replayCurrentSong(false);
+                }
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            gameState.uploadedSongs.forEach(song => {
+                if (song.previewUrl && song.previewUrl.startsWith('blob:')) URL.revokeObjectURL(song.previewUrl);
+            });
+        });
+    </script>
+</body>
+</html>
